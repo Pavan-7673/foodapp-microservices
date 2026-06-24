@@ -1,0 +1,108 @@
+services:
+
+  user-mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass123
+      MYSQL_DATABASE: userdb
+      MYSQL_USER: fooduser
+      MYSQL_PASSWORD: foodpassword
+    networks:
+      - foodnet
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+
+  restaurant-mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass123
+      MYSQL_DATABASE: restaurantdb
+      MYSQL_USER: fooduser
+      MYSQL_PASSWORD: foodpassword
+    networks:
+      - foodnet
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+
+  order-mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass123
+      MYSQL_DATABASE: orderdb
+      MYSQL_USER: fooduser
+      MYSQL_PASSWORD: foodpassword
+    networks:
+      - foodnet
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+
+  user-service:
+    build: ./user-service
+    environment:
+      DB_HOST: user-mysql
+      DB_USER: fooduser
+      DB_PASSWORD: foodpassword
+      DB_NAME: userdb
+    ports:
+      - "5001:5000"
+    depends_on:
+      user-mysql:
+        condition: service_healthy
+    networks:
+      - foodnet
+
+  restaurant-service:
+    build: ./restaurant-service
+    environment:
+      DB_HOST: restaurant-mysql
+      DB_USER: fooduser
+      DB_PASSWORD: foodpassword
+      DB_NAME: restaurantdb
+    ports:
+      - "5002:5000"
+    depends_on:
+      restaurant-mysql:
+        condition: service_healthy
+    networks:
+      - foodnet
+
+  order-service:
+    build: ./order-service
+    environment:
+      DB_HOST: order-mysql
+      DB_USER: fooduser
+      DB_PASSWORD: foodpassword
+      DB_NAME: orderdb
+      USER_SERVICE_URL: http://user-service:5000
+      RESTAURANT_SERVICE_URL: http://restaurant-service:5000
+    ports:
+      - "5003:5000"
+    depends_on:
+      order-mysql:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      restaurant-service:
+        condition: service_started
+    networks:
+      - foodnet
+  frontend:
+    build: ./frontend
+    ports:
+      - "8095:80"
+    depends_on:
+      - user-service
+      - restaurant-service
+      - order-service
+    networks:
+      - foodnet
+
+networks:
+  foodnet:
+    driver: bridge
