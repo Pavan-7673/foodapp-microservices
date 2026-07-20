@@ -28,3 +28,13 @@ jobs:
           context: ./user-service
           push: true
           tags: pavanreddy8/foodapp-user-service:${{ steps.vars.outputs.tag }}
+      - name: Update dev overlay in foodapp-gitops
+        run: |
+          git clone https://x-access-token:${{ secrets.GITOPS_REPO_TOKEN }}@github.com/Pavan-7673/foodapp-gitops.git
+          cd foodapp-gitops/apps/user-service/overlays/dev
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          ./kustomize edit set image pavanreddy8/foodapp-user-service=pavanreddy8/foodapp-user-service:${{ steps.vars.outputs.tag }}
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git commit -am "ci: bump user-service dev to ${{ steps.vars.outputs.tag }}"
+          git push
